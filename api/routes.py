@@ -14,7 +14,7 @@ router = APIRouter()
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = auth.get_user(db, user.username)
     if db_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already registered")
     hashed_password = auth.get_password_hash(user.password)
     new_user = models.User(username=user.username, hashed_password=hashed_password)
     db.add(new_user)
@@ -29,7 +29,7 @@ def login(
 ):
     user = auth.authenticate_user(db, form_data.username, form_data.password)
     if not user:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect username or password")
     access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = auth.create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
@@ -47,7 +47,7 @@ def get_polls(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
 def get_poll(poll_id: int, db: Session = Depends(get_db)):
     poll = db.query(models.Poll).filter(models.Poll.id == poll_id).first()
     if not poll:
-        raise HTTPException(status_code=404, detail="Poll not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Poll not found")
     return poll
 
 
@@ -61,7 +61,7 @@ def vote_on_poll(
     # Check if the poll exists
     poll = db.query(models.Poll).filter(models.Poll.id == poll_id).first()
     if not poll:
-        raise HTTPException(status_code=404, detail="Poll not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Poll not found")
     
     # Check if the option exists and belongs to the poll
     option = db.query(models.Option).filter(
@@ -69,7 +69,7 @@ def vote_on_poll(
         models.Option.poll_id == poll_id
     ).first()
     if not option:
-        raise HTTPException(status_code=404, detail="Option not found or does not belong to this poll")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Option not found or does not belong to this poll")
     
     # Check if the user has already voted on this poll
     existing_vote = db.query(models.Vote).join(models.Option).filter(
@@ -97,7 +97,7 @@ def get_poll_results(poll_id: int, db: Session = Depends(get_db)):
     # Check if the poll exists
     poll = db.query(models.Poll).filter(models.Poll.id == poll_id).first()
     if not poll:
-        raise HTTPException(status_code=404, detail="Poll not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Poll not found")
     
     # Get the options with vote counts
     results = db.query(
@@ -126,7 +126,7 @@ def create_poll(
     # Validate that at least two options are provided
     if len(poll.options) < 2:
         raise HTTPException(
-            status_code=400, detail="At least two options are required for a poll"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="At least two options are required for a poll"
         )
     
     # Create the poll
@@ -145,7 +145,7 @@ def create_poll(
     return new_poll
 
 
-@router.delete("/polls/{poll_id}", status_code=204)
+@router.delete("/polls/{poll_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_poll(
     poll_id: int,
     db: Session = Depends(get_db),
@@ -157,7 +157,7 @@ def delete_poll(
         .first()
     )
     if not poll:
-        raise HTTPException(status_code=404, detail="Poll not found or not authorized")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Poll not found or not authorized")
     db.delete(poll)
     db.commit()
     return None
